@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="theme-color" content="#f8fafc">
+    <title>Speed Building Test — Lecture 4: Weighted Average & Successive Change</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+        :root {
+            --bg-main: #f1f5f9; --bg-card: #ffffff; --primary: #2563eb; --primary-hover: #1d4ed8;
+            --primary-light: #eff6ff; --text-dark: #0f172a; --text-muted: #64748b; --border-color: #e2e8f0;
+            --green: #10b981; --green-light: #ecfdf5; --red: #ef4444; --red-light: #fef2f2;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06); --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08);
+        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-main); color: var(--text-dark); min-height: 100dvh; font-size: 15px; line-height: 1.5; overflow-x: hidden; }
+        button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+        img { max-width: 100%; height: auto; vertical-align: middle; }
+        .hidden { display: none !important; }
+        .start-screen { position: fixed; inset: 0; background: var(--bg-main); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+        .start-card { width: 100%; max-width: 440px; background: var(--bg-card); border-radius: 24px; padding: 36px 28px; box-shadow: var(--shadow-lg); text-align: center; border: 1px solid var(--border-color); }
+        .brand-icon { width: 60px; height: 60px; background: var(--primary-light); color: var(--primary); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 16px; }
+        .start-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+        .start-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; }
+        .mode-btn { display: flex; align-items: center; gap: 16px; width: 100%; padding: 16px; background: #fff; border: 1.5px solid var(--border-color); border-radius: 16px; text-align: left; margin-bottom: 12px; transition: all 0.2s; }
+        .mode-btn:hover { border-color: var(--primary); background: var(--primary-light); transform: translateY(-2px); }
+        .mode-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .mode-icon.quiz { background: #dbeafe; color: #2563eb; }
+        .mode-icon.test { background: #d1fae5; color: #059669; }
+        .mode-name { font-size: 15px; font-weight: 700; }
+        .mode-info-txt { font-size: 12px; color: var(--text-muted); }
+        .quiz-app { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+        .quiz-header { flex-shrink: 0; background: #fff; border-bottom: 1px solid var(--border-color); padding: 12px 18px; }
+        .quiz-header-inner { max-width: 900px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .hdr-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 700; }
+        .hdr-timer { padding: 6px 14px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 20px; font-family: monospace; font-weight: 700; color: var(--primary); }
+        .quiz-main { flex: 1; overflow-y: auto; max-width: 900px; width: 100%; margin: 0 auto; padding: 24px 16px; }
+        .q-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; padding: 24px; box-shadow: var(--shadow-sm); }
+        .q-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+        .q-num-badge { padding: 5px 12px; background: var(--primary-light); color: var(--primary); border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .q-text { font-size: 16px; font-weight: 600; line-height: 1.6; margin-bottom: 22px; }
+        .opts { display: flex; flex-direction: column; gap: 11px; }
+        .opt { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: #fff; border: 1.5px solid var(--border-color); border-radius: 14px; cursor: pointer; transition: all 0.15s; }
+        .opt:hover:not(.locked) { border-color: var(--primary); background: #f8fafc; }
+        .opt.selected { border-color: var(--primary); background: var(--primary-light); }
+        .opt.correct { border-color: var(--green); background: var(--green-light); }
+        .opt.wrong { border-color: var(--red); background: var(--red-light); }
+        .opt.locked { cursor: default; }
+        .opt-letter { width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: var(--text-muted); flex-shrink: 0; }
+        .opt.selected .opt-letter { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .opt.correct .opt-letter { background: var(--green); color: #fff; border-color: var(--green); }
+        .opt.wrong .opt-letter { background: var(--red); color: #fff; border-color: var(--red); }
+        .opt-text { flex: 1; font-weight: 600; }
+        .sol-box { margin-top: 20px; padding: 16px; background: #f8fafc; border-left: 4px solid var(--primary); border-radius: 12px; }
+        .sol-head { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--primary); margin-bottom: 8px; }
+        .quiz-nav { flex-shrink: 0; background: #fff; border-top: 1px solid var(--border-color); padding: 12px 18px; }
+        .quiz-nav-inner { max-width: 900px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .nav-btn { display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; }
+        .nav-btn.prev { background: #fff; border: 1px solid var(--border-color); }
+        .nav-btn.prev:disabled { opacity: 0.4; cursor: not-allowed; }
+        .nav-btn.submit { background: var(--green-light); color: #065f46; border: 1px solid #a7f3d0; }
+        .nav-btn.next { background: var(--primary); color: #fff; }
+        .palette-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 150; display: none; }
+        .palette-overlay.open { display: block; }
+        .palette-drawer { position: fixed; top: 0; left: 0; bottom: 0; width: min(340px, 85vw); background: #fff; z-index: 160; display: flex; flex-direction: column; transform: translateX(-100%); transition: transform 0.25s; }
+        .palette-drawer.open { transform: translateX(0); }
+        .pal-head { padding: 18px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; font-weight: 700; }
+        .pal-grid { flex: 1; overflow-y: auto; padding: 16px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .pal-btn { aspect-ratio: 1; border-radius: 10px; border: 1px solid var(--border-color); background: #f8fafc; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+        .pal-btn.answered { background: var(--green); color: #fff; border-color: var(--green); }
+        .pal-btn.current { outline: 2px solid var(--primary); outline-offset: 2px; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 170; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-overlay.open { display: flex; }
+        .modal-box { width: 100%; max-width: 420px; background: #fff; border-radius: 20px; padding: 28px; text-align: center; }
+        .modal-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 22px; }
+        .modal-stat { background: #f8fafc; border-radius: 12px; padding: 14px; border: 1px solid var(--border-color); }
+        .modal-stat-num { font-size: 24px; font-weight: 800; }
+        .modal-btn { width: 100%; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+        .modal-btn.confirm { background: var(--primary); color: #fff; }
+        .modal-btn.cancel { background: #f1f5f9; }
+        .results-screen { position: fixed; inset: 0; background: var(--bg-main); z-index: 180; display: none; overflow-y: auto; padding: 30px 16px 60px; }
+        .results-screen.open { display: block; }
+        .results-box { max-width: 600px; margin: 0 auto; text-align: center; }
+        .res-score-card { background: #0f172a; color: #fff; border-radius: 20px; padding: 28px; margin: 20px 0; }
+        .res-score-val { font-size: 54px; font-weight: 800; }
+        .res-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+        .res-item { background: #fff; border-radius: 14px; padding: 16px; border: 1px solid var(--border-color); }
+        .res-item-val { font-size: 22px; font-weight: 700; }
+        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px); background: #0f172a; color: #fff; padding: 10px 20px; border-radius: 30px; font-size: 13px; font-weight: 600; z-index: 300; opacity: 0; transition: all 0.25s; }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="start-screen" id="startScreen">
+        <div class="start-card">
+            <div class="brand-icon"><i class="fas fa-layer-group"></i></div>
+            <h1 class="start-title">Profit &amp; Loss — Lecture 4</h1>
+            <p class="start-desc">Weighted Average &amp; Successive Change</p>
+            <button class="mode-btn" onclick="startApp('quiz')">
+                <div class="mode-icon quiz"><i class="fas fa-bolt"></i></div>
+                <div><div class="mode-name">Practice Mode</div><div class="mode-info-txt">Har question ke baad instant solution dekhein.</div></div>
+            </button>
+            <button class="mode-btn" onclick="startApp('test')">
+                <div class="mode-icon test"><i class="fas fa-clock"></i></div>
+                <div><div class="mode-name">Exam Mode</div><div class="mode-info-txt">Complete exam simulation score analysis ke saath.</div></div>
+            </button>
+        </div>
+    </div>
+
+    <div class="quiz-app hidden" id="quizApp">
+        <header class="quiz-header">
+            <div class="quiz-header-inner">
+                <button class="hdr-btn" onclick="openPalette()"><i class="fas fa-th-large"></i></button>
+                <div class="hdr-brand">Lecture 4: Weighted Average</div>
+                <div class="hdr-timer"><i class="fas fa-stopwatch"></i> <span id="timerText">00:00</span></div>
+            </div>
+        </header>
+
+        <main class="quiz-main" id="quizMain"></main>
+
+        <nav class="quiz-nav" id="quizNav">
+            <div class="quiz-nav-inner">
+                <button class="nav-btn prev" id="prevBtn" onclick="prevQuestion()"><i class="fas fa-arrow-left"></i> Previous</button>
+                <button class="nav-btn submit" onclick="openSubmitModal()"><i class="fas fa-paper-plane"></i> Submit</button>
+                <button class="nav-btn next" id="nextBtn" onclick="nextQuestion()"><span id="nextLabel">Next</span> <i class="fas fa-arrow-right"></i></button>
+            </div>
+        </nav>
+    </div>
+
+    <div class="palette-overlay" id="paletteOverlay" onclick="closePalette()"></div>
+    <aside class="palette-drawer" id="paletteDrawer">
+        <div class="pal-head"><span>Questions</span><button onclick="closePalette()"><i class="fas fa-times"></i></button></div>
+        <div class="pal-grid" id="paletteGrid"></div>
+    </aside>
+
+    <div class="modal-overlay" id="submitModal">
+        <div class="modal-box">
+            <h3>Submit Test?</h3>
+            <div class="modal-stats-grid">
+                <div class="modal-stat"><div class="modal-stat-num" id="modalAttempted" style="color:var(--green)">0</div><div>Attempted</div></div>
+                <div class="modal-stat"><div class="modal-stat-num" id="modalUnattempted" style="color:var(--text-muted)">0</div><div>Unattempted</div></div>
+            </div>
+            <button class="modal-btn confirm" onclick="confirmSubmit()">Yes, Finish</button>
+            <button class="modal-btn cancel" onclick="closeSubmitModal()">Resume</button>
+        </div>
+    </div>
+
+    <div class="results-screen" id="resultsScreen"><div class="results-box" id="resultsInner"></div></div>
+    <div class="toast" id="toast"><span id="toastText"></span></div>
+
+    <script>
+        const QUESTIONS = [
+            {
+                q: "One-half of an article is sold at 10% profit, one-third at 15% profit and the remaining part at 20% profit. If the total profit is ₹70, find the cost price of the article.<br><br>किसी वस्तु का आधा भाग 10% लाभ पर, एक-तिहाई भाग 15% लाभ पर और शेष भाग 20% लाभ पर बेचा जाता है। यदि कुल लाभ ₹70 है, तो वस्तु का क्रय मूल्य ज्ञात कीजिए।",
+                o: ["₹525", "₹750", "₹625", "₹725"],
+                a: 0,
+                s: "Let CP = 300x.<br>1/2 of 300x = 150x at 10% = 15x.<br>1/3 of 300x = 100x at 15% = 15x.<br>Remaining 50x at 20% = 10x.<br>Total Profit = 15x + 15x + 10x = 40x = 70 => x = 1.75.<br>CP = 300 × 1.75 = ₹525."
+            },
+            {
+                q: "Two-fifths of an article is sold at 12% profit, one-third at 15% profit and the remaining part at 20% profit. If the total profit is ₹88, find the cost price of the article.<br><br>किसी वस्तु का दो-पांचवां भाग 12% लाभ पर, एक-तिहाई भाग 15% लाभ पर और शेष भाग 20% लाभ पर बेचा जाता है। यदि कुल लाभ ₹88 है, तो वस्तु का क्रय मूल्य ज्ञात कीजिए।",
+                o: ["₹500", "₹581.49", "₹581.88", "₹580.88"],
+                a: 1,
+                s: "Let CP = 15 units. 2/5 = 6 units at 12% = 0.72; 1/3 = 5 units at 15% = 0.75; remaining 4 units at 20% = 0.80.<br>Total profit = 2.27 units = ₹88 => CP = (88 / 2.27) × 15 ≈ ₹581.49."
+            },
+            {
+                q: "A trader purchased 60 dozen oranges for ₹7,200. 10 dozen oranges were spoiled. He sold half of the remaining oranges at 25% profit and the other half at 10% profit. Find his overall profit or loss percentage.<br><br>एक व्यापारी ने 60 दर्जन संतरे ₹7,200 में खरीदे। 10 दर्जन संतरे खराब हो गए। उसने शेष संतरे का आधा भाग 25% लाभ पर और आधा भाग 10% लाभ पर बेचा। उसका कुल लाभ या हानि प्रतिशत ज्ञात कीजिए।",
+                o: ["2.08% Profit", "2.08% Loss", "3.08% Profit", "3.08% Loss"],
+                a: 1,
+                s: "Cost per dozen = 7200 / 60 = ₹120. Usable = 50 dozen.<br>25 dozen at 25% profit = 25 × 150 = ₹3750.<br>25 dozen at 10% profit = 25 × 132 = ₹3300.<br>Total SP = ₹7050. Total CP = ₹7200.<br>Loss = 7200 - 7050 = ₹150 => Loss % = (150 / 7200) × 100 = 2.08% Loss."
+            },
+            {
+                q: "A man bought 75 dozen mangoes for ₹9,000. 15 dozen mangoes became rotten. He sold two-thirds of the good mangoes at 25% profit and the remaining at 10% profit. Find his overall profit or loss percentage.<br><br>एक व्यक्ति ने 75 दर्जन आम ₹9,000 में खरीदे। 15 दर्जन आम सड़ गए। उसने अच्छे आमों का दो-तिहाई भाग 25% लाभ पर और शेष आम 10% लाभ पर बेचे। उसका कुल लाभ या हानि प्रतिशत ज्ञात कीजिए।",
+                o: ["4% Profit", "4% Loss", "5% Loss", "5% Profit"],
+                a: 1,
+                s: "Good mangoes = 60 dozen at CP ₹120/dozen.<br>40 dozen at 25% profit = 40 × 150 = ₹6000.<br>20 dozen at 10% profit = 20 × 132 = ₹2640.<br>Total SP = ₹8640. Loss = 9000 - 8640 = ₹360 => Loss % = (360 / 9000) × 100 = 4% Loss."
+            },
+            {
+                q: "A person sells 25% of his goods at 12% profit, 40% at 15% profit and the remaining at 20% loss. Find his overall profit or loss percentage.<br><br>एक व्यक्ति अपने माल का 25% भाग 12% लाभ पर, 40% भाग 15% लाभ पर और शेष माल 20% हानि पर बेचता है। उसका कुल लाभ या हानि प्रतिशत ज्ञात कीजिए।",
+                o: ["2% Profit", "2% Loss", "3% Profit", "3% Loss"],
+                a: 0,
+                s: "Remaining = 100 - 25 - 40 = 35%.<br>Net % = (25 × 12 + 40 × 15 - 35 × 20) / 100 = (300 + 600 - 700) / 100 = 2% Profit."
+            },
+            {
+                q: "A trader buys 100 articles for ₹10,000. 20 articles are damaged and cannot be sold. Of the remaining articles, 50% are sold at 25% profit and the rest at 10% profit. Find the overall profit or loss percentage.<br><br>एक व्यापारी 100 वस्तुएँ ₹10,000 में खरीदता है। 20 वस्तुएँ खराब हो जाती हैं और बेची नहीं जा सकतीं। शेष वस्तुओं में से 50% को 25% लाभ पर और बाकी को 10% लाभ पर बेचा जाता है। कुल लाभ या हानि प्रतिशत ज्ञात कीजिए।",
+                o: ["3.5% Profit", "5% Loss", "6% Loss", "2% Profit"],
+                a: 2,
+                s: "CP per article = ₹100. 80 remaining.<br>40 items sold at 25% profit = ₹5000.<br>40 items sold at 10% profit = ₹4400.<br>Total SP = ₹9400. Loss = 10000 - 9400 = ₹600 (6% Loss)."
+            },
+            {
+                q: "An article is sold in the ratio 2:3:5 at profits of 10%, 20% and 30%, respectively. Find the overall profit percentage.<br><br>एक वस्तु को 2:3:5 के अनुपात में क्रमशः 10%, 20% और 30% लाभ पर बेचा जाता है। कुल लाभ प्रतिशत ज्ञात कीजिए।",
+                o: ["19% profit", "17% profit", "23% profit", "29% profit"],
+                a: 2,
+                s: "Total = 2 + 3 + 5 = 10.<br>Net % = (2 × 10 + 3 × 20 + 5 × 30) / 10 = (20 + 60 + 150) / 10 = 23%."
+            },
+            {
+                q: "A wholesaler sells an article to a retailer at a profit of 20%. The retailer sells it to a customer at a profit of 25%. If the wholesaler's cost price is ₹800, find the price paid by the customer.<br><br>एक थोक विक्रेता किसी वस्तु को 20% लाभ पर एक खुदरा विक्रेता को बेचता है। खुदरा विक्रेता उसे 25% लाभ पर ग्राहक को बेचता है। यदि थोक विक्रेता का क्रय मूल्य ₹800 है, तो ग्राहक द्वारा चुकाई गई कीमत ज्ञात कीजिए।",
+                o: ["₹1,200", "₹1,400", "₹1,450", "₹1,500"],
+                a: 0,
+                s: "Final Price = 800 × 1.20 × 1.25 = 800 × 1.5 = ₹1,200."
+            },
+            {
+                q: "A manufacturer sells an article to a wholesaler at 15% profit. The wholesaler sells it to a retailer at 20% profit and the retailer sells it to the customer at 25% profit. Find the overall profit percentage of the manufacturer with respect to the original cost price.<br><br>एक निर्माता किसी वस्तु को 15% लाभ पर थोक विक्रेता को बेचता है। थोक विक्रेता इसे 20% लाभ पर खुदरा विक्रेता को तथा खुदरा विक्रेता इसे 25% लाभ पर ग्राहक को बेचता है। मूल क्रय मूल्य के सापेक्ष कुल लाभ प्रतिशत ज्ञात कीजिए।",
+                o: ["72.5% profit", "72% profit", "75% profit", "25% profit"],
+                a: 0,
+                s: "Net Multiplier = 1.15 × 1.20 × 1.25 = 1.725 => Gain = 72.5%."
+            },
+            {
+                q: "A wholesaler sells an article to a retailer at 25% profit. The retailer sells it to a customer at 20% profit. If the customer pays ₹1,500, find the cost price of the wholesaler.<br><br>एक थोक विक्रेता किसी वस्तु को 25% लाभ पर खुदरा विक्रेता को बेचता है। खुदरा विक्रेता उसे 20% लाभ पर ग्राहक को बेचता है। यदि ग्राहक ₹1,500 देता है, तो थोक विक्रेता का क्रय मूल्य ज्ञात कीजिए।",
+                o: ["₹1200", "₹1000", "₹1500", "₹2500"],
+                a: 1,
+                s: "CP × 1.25 × 1.20 = 1500 => CP × 1.5 = 1500 => CP = ₹1,000."
+            },
+            {
+                q: "A wholesaler gains 20% by selling an article to a retailer. The retailer gains 25% by selling it to a customer. If the customer pays ₹900, what was the cost price of the article to the wholesaler?<br><br>एक थोक विक्रेता किसी वस्तु को खुदरा विक्रेता को बेचकर 20% लाभ कमाता है। खुदरा विक्रेता उसे ग्राहक को बेचकर 25% लाभ कमाता है। यदि ग्राहक ₹900 देता है, तो थोक विक्रेता के लिए वस्तु का क्रय मूल्य क्या था?",
+                o: ["₹450", "₹550", "₹650", "₹600"],
+                a: 3,
+                s: "CP × (6/5) × (5/4) = 900 => CP × 1.5 = 900 => CP = ₹600."
+            },
+            {
+                q: "A wholesaler sells an article at 20% profit to a retailer. The retailer marks up the price by 30% but gives a discount of 10% to the customer. Find the overall profit percentage with respect to the wholesaler's cost price.<br><br>एक थोक विक्रेता किसी वस्तु को 20% लाभ पर खुदरा विक्रेता को बेचता है। खुदरा विक्रेता कीमत में 30% की वृद्धि करता है, लेकिन ग्राहक को 10% की छूट देता है। थोक विक्रेता के क्रय मूल्य के सापेक्ष कुल लाभ प्रतिशत ज्ञात कीजिए।",
+                o: ["40.4% Profit", "30.4% Profit", "45.4% Profit", "42.4% Profit"],
+                a: 0,
+                s: "Wholesaler SP = 1.20. Retailer sells at 1.20 × 1.30 × 0.90 = 1.404 => Overall Profit = 40.4%."
+            },
+            {
+                q: "A manufacturer sells a product to a wholesaler at 20% profit. The wholesaler sells it to a retailer at 10% profit, and the retailer sells it to a customer at 25% profit. If the manufacturer's cost price is ₹2,000, find the final price paid by the customer.<br><br>एक निर्माता किसी उत्पाद को 20% लाभ पर थोक विक्रेता को बेचता है। थोक विक्रेता इसे 10% लाभ पर खुदरा विक्रेता को और खुदरा विक्रेता इसे 25% लाभ पर ग्राहक को बेचता है। यदि निर्माता का क्रय मूल्य ₹2,000 है, तो ग्राहक द्वारा चुकाई गई अंतिम कीमत ज्ञात कीजिए।",
+                o: ["₹3200", "₹3300", "₹3000", "₹2500"],
+                a: 1,
+                s: "Price = 2000 × 1.20 × 1.10 × 1.25 = 2000 × 1.65 = ₹3,300."
+            },
+            {
+                q: "A wholesaler sells an article to a retailer at 25% profit. The retailer sells it to a customer at 20% profit. If the difference between the wholesaler's cost price and the final selling price is ₹600, find the wholesaler's cost price.<br><br>एक थोक विक्रेता किसी वस्तु को 25% लाभ पर खुदरा विक्रेता को बेचता है। खुदरा विक्रेता उसे 20% लाभ पर ग्राहक को बेचता है। यदि थोक विक्रेता के क्रय मूल्य और अंतिम विक्रय मूल्य का अंतर ₹600 है, तो थोक विक्रेता का क्रय मूल्य ज्ञात कीजिए।",
+                o: ["₹1500", "₹1800", "₹1200", "₹1250"],
+                a: 2,
+                s: "Final SP = CP × 1.25 × 1.20 = 1.5 CP.<br>Difference = 0.5 CP = 600 => CP = ₹1,200."
+            },
+            {
+                q: "A wholesaler sells an article to a retailer for ₹1,200 at a profit of 20%. The retailer sells it to a customer for ₹1,620. Find the retailer's profit percentage.<br><br>एक थोक विक्रेता किसी वस्तु को 20% लाभ पर ₹1,200 में खुदरा विक्रेता को बेचता है। खुदरा विक्रेता इसे ₹1,620 में ग्राहक को बेचता है। खुदरा विक्रेता का लाभ प्रतिशत ज्ञात कीजिए।",
+                o: ["18%", "20%", "22%", "35%"],
+                a: 3,
+                s: "Retailer CP = ₹1200, SP = ₹1620.<br>Profit % = ((1620 - 1200) / 1200) × 100 = (420 / 1200) × 100 = 35%."
+            },
+            {
+                q: "A wholesaler sells an article to a retailer at 25% profit and the retailer sells it to a customer at 20% profit. If the customer pays ₹1,500, find the cost price of the wholesaler.<br><br>एक थोक विक्रेता किसी वस्तु को 25% लाभ पर खुदरा विक्रेता को बेचता है और खुदरा विक्रेता इसे 20% लाभ पर ग्राहक को बेचता है। यदि ग्राहक ₹1,500 देता है, तो थोक विक्रेता का क्रय मूल्य ज्ञात कीजिए।",
+                o: ["₹1,500", "₹1,250", "₹1,000", "₹2,500"],
+                a: 2,
+                s: "CP × 1.25 × 1.20 = 1500 => CP × 1.5 = 1500 => CP = ₹1,000."
+            },
+            {
+                q: "A manufacturer sells an article to a wholesaler at 10% profit. The wholesaler sells it to a retailer at 20% profit, and the retailer sells it to the customer at 25% profit. If the manufacturer's cost price is ₹4,000, find the final price paid by the customer.<br><br>एक निर्माता किसी वस्तु को 10% लाभ पर थोक विक्रेता को बेचता है। थोक विक्रेता इसे 20% लाभ पर खुदरा विक्रेता को और खुदरा विक्रेता इसे 25% लाभ पर ग्राहक को बेचता है। यदि निर्माता का क्रय मूल्य ₹4,000 है, तो ग्राहक द्वारा चुकाई गई अंतिम कीमत ज्ञात कीजिए।",
+                o: ["₹4,500", "₹5,500", "₹6,000", "₹6,600"],
+                a: 3,
+                s: "Price = 4000 × 1.10 × 1.20 × 1.25 = 4000 × 1.65 = ₹6,600."
+            },
+            {
+                q: "A wholesaler purchases an article for ₹800 and sells it to a retailer at 25% profit. The retailer sells it to a customer for ₹1,200. Find the retailer's profit percentage.<br><br>एक थोक विक्रेता किसी वस्तु को ₹800 में खरीदता है और 25% लाभ पर खुदरा विक्रेता को बेचता है। खुदरा विक्रेता इसे ग्राहक को ₹1,200 में बेचता है। खुदरा विक्रेता का लाभ प्रतिशत ज्ञात कीजिए।",
+                o: ["16%", "18%", "20%", "21%"],
+                a: 2,
+                s: "Retailer CP = 800 × 1.25 = ₹1000.<br>Retailer SP = ₹1200.<br>Profit % = ((1200 - 1000) / 1000) × 100 = 20%."
+            },
+            {
+                q: "A purchases an article for ₹4,000 and sells it to B at 25% profit. B sells it to C at 20% loss. Find the price paid by C.<br><br>A किसी वस्तु को ₹4,000 में खरीदता है और B को 25% लाभ पर बेचता है। B इसे C को 20% हानि पर बेचता है। C द्वारा भुगतान की गई कीमत ज्ञात कीजिए।",
+                o: ["4500", "4000", "5500", "5000"],
+                a: 1,
+                s: "Price paid by C = 4000 × 1.25 × 0.80 = 4000 × 1 = ₹4,000."
+            },
+            {
+                q: "A wholesaler sells an article to a retailer at 20% profit. The retailer sells it to a customer at a certain profit. If the wholesaler's cost price is ₹1,500 and the customer pays ₹2,250, find the retailer's profit percentage.<br><br>एक थोक विक्रेता किसी वस्तु को 20% लाभ पर खुदरा विक्रेता को बेचता है। खुदरा विक्रेता इसे किसी निश्चित लाभ पर ग्राहक को बेचता है। यदि थोक विक्रेता का क्रय मूल्य ₹1,500 है और ग्राहक ₹2,250 देता है, तो खुदरा विक्रेता का लाभ प्रतिशत ज्ञात कीजिए।",
+                o: ["25%", "20%", "40%", "10%"],
+                a: 0,
+                s: "Retailer CP = 1500 × 1.20 = ₹1800.<br>Customer pays = ₹2250.<br>Retailer Profit % = ((2250 - 1800) / 1800) × 100 = (450 / 1800) × 100 = 25%."
+            }
+        ];
+
+        const state = {
+            current: 0, answers: new Array(QUESTIONS.length).fill(null),
+            locked: new Array(QUESTIONS.length).fill(false), visited: new Array(QUESTIONS.length).fill(false),
+            mode: 'test', startTime: null, timerInterval: null, elapsed: 0
+        };
+
+        function $(id) { return document.getElementById(id); }
+        function toast(msg) {
+            const t = $('toast'); $('toastText').textContent = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2000);
+        }
+        function formatTime(s) {
+            const m = Math.floor(s / 60); return String(m).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+        }
+        function startApp(mode) {
+            state.mode = mode; $('startScreen').classList.add('hidden'); $('quizApp').classList.remove('hidden');
+            state.startTime = Date.now(); state.visited[0] = true;
+            state.timerInterval = setInterval(() => {
+                state.elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+                $('timerText').textContent = formatTime(state.elapsed);
+            }, 1000);
+            renderQuestion(); buildPalette();
+        }
+        function renderQuestion() {
+            const i = state.current, q = QUESTIONS[i], isQuiz = state.mode === 'quiz', locked = state.locked[i], userAns = state.answers[i];
+            let optsHtml = '';
+            q.o.forEach((opt, idx) => {
+                let cls = '', tag = '';
+                if (isQuiz && locked) {
+                    if (idx === q.a) { cls = 'correct'; tag = '<span class="opt-tag">Correct</span>'; }
+                    if (userAns === idx && idx !== q.a) { cls = 'wrong'; tag = '<span class="opt-tag">Your Ans</span>'; }
+                } else if (userAns === idx) cls = 'selected';
+                optsHtml += `<div class="opt ${cls} ${locked ? 'locked' : ''}" onclick="selectOption(${idx})"><div class="opt-letter">${String.fromCharCode(65 + idx)}</div><div class="opt-text">${opt}</div>${tag}</div>`;
+            });
+            let solHtml = (isQuiz && locked) ? `<div class="sol-box"><div class="sol-head"><i class="fas fa-lightbulb"></i> Solution</div><div>${q.s}</div></div>` : '';
+            $('quizMain').innerHTML = `<div class="q-card"><div class="q-top"><div class="q-num-badge">Question ${i + 1} of ${QUESTIONS.length}</div></div><div class="q-text">${q.q}</div><div class="opts">${optsHtml}</div>${solHtml}</div>`;
+            $('prevBtn').disabled = i === 0;
+            $('nextLabel').textContent = i === QUESTIONS.length - 1 ? 'Finish' : 'Next';
+            updatePaletteGrid();
+        }
+        function selectOption(idx) {
+            if (state.mode === 'quiz' && state.locked[state.current]) return;
+            state.answers[state.current] = idx;
+            if (state.mode === 'quiz') {
+                state.locked[state.current] = true;
+                if (idx === QUESTIONS[state.current].a) toast('Correct! 🎉'); else toast('Incorrect');
+            }
+            renderQuestion();
+        }
+        function prevQuestion() { if (state.current > 0) { state.current--; renderQuestion(); } }
+        function nextQuestion() {
+            if (state.current < QUESTIONS.length - 1) { state.current++; state.visited[state.current] = true; renderQuestion(); }
+            else openSubmitModal();
+        }
+        function buildPalette() {
+            const grid = $('paletteGrid'); grid.innerHTML = '';
+            QUESTIONS.forEach((_, i) => {
+                const btn = document.createElement('button'); btn.className = 'pal-btn'; btn.id = 'pal-' + i; btn.textContent = i + 1;
+                btn.onclick = () => { state.current = i; closePalette(); renderQuestion(); };
+                grid.appendChild(btn);
+            });
+            updatePaletteGrid();
+        }
+        function updatePaletteGrid() {
+            QUESTIONS.forEach((_, i) => {
+                const btn = $('pal-' + i); if (!btn) return;
+                btn.className = 'pal-btn';
+                if (i === state.current) btn.classList.add('current');
+                if (state.answers[i] !== null) btn.classList.add('answered');
+            });
+        }
+        function openPalette() { $('paletteDrawer').classList.add('open'); $('paletteOverlay').classList.add('open'); }
+        function closePalette() { $('paletteDrawer').classList.remove('open'); $('paletteOverlay').classList.remove('open'); }
+        function openSubmitModal() {
+            const ans = state.answers.filter(a => a !== null).length;
+            $('modalAttempted').textContent = ans; $('modalUnattempted').textContent = QUESTIONS.length - ans;
+            $('submitModal').classList.add('open');
+        }
+        function closeSubmitModal() { $('submitModal').classList.remove('open'); }
+        function confirmSubmit() {
+            closeSubmitModal(); if (state.timerInterval) clearInterval(state.timerInterval);
+            let correct = 0, wrong = 0;
+            state.answers.forEach((ans, i) => { if (ans !== null) { if (ans === QUESTIONS[i].a) correct++; else wrong++; } });
+            $('resultsInner').innerHTML = `
+                <h2>Test Completed!</h2><p style="color:var(--text-muted);margin:8px 0;">Total Time: ${formatTime(state.elapsed)}</p>
+                <div class="res-score-card"><div class="res-score-val">${correct} / ${QUESTIONS.length}</div><div>Total Score</div></div>
+                <div class="res-grid">
+                    <div class="res-item"><div class="res-item-val" style="color:var(--green)">${correct}</div><div>Correct</div></div>
+                    <div class="res-item"><div class="res-item-val" style="color:var(--red)">${wrong}</div><div>Wrong</div></div>
+                </div>
+                <button class="modal-btn confirm" onclick="location.reload()">Retake</button>
+            `;
+            $('resultsScreen').classList.add('open');
+        }
+    </script>
+</body>
+</html>
